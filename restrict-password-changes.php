@@ -112,3 +112,16 @@ function rpc_retrieve_password_message( $message, $key, $user ) {
     return '';
 }
 add_filter( 'retrieve_password_message', 'rpc_retrieve_password_message', 10, 3 );
+/**
+ * 5) Hide "Lost your password?" link on the login screen.
+ */
+function rpc_hide_lost_password_link() {
+    ?>
+    <style>
+        #nav .lostpassword-link {
+            display: none !important;
+        }
+    </style>
+    <?php
+}
+add_action( 'login_enqueue_scripts', 'rpc_hide_lost_password_link' );
