@@ -118,7 +118,7 @@ add_filter( 'retrieve_password_message', 'rpc_retrieve_password_message', 10, 3 
 function rpc_hide_lost_password_link() {
     ?>
     <style>
-        #nav .lostpassword-link {
+        #nav .wp-login-lost-password {
             display: none !important;
         }
     </style>
