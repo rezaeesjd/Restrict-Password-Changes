@@ -1,8 +1,8 @@
 <?php
 /*
 Plugin Name: Restrict Password Changes
-Description: Prevents non-admin users from changing or resetting their passwords.
-Version: 1.0.0
+Description: Prevents non-admin users from changing or resetting their passwords and forces SSO login via JumpCloud.
+Version: 1.1.0
 Author: Your Name
 */
 
@@ -112,6 +112,7 @@ function rpc_retrieve_password_message( $message, $key, $user ) {
     return '';
 }
 add_filter( 'retrieve_password_message', 'rpc_retrieve_password_message', 10, 3 );
+
 /**
  * 5) Hide "Lost your password?" link on the login screen.
  */
@@ -125,3 +126,50 @@ function rpc_hide_lost_password_link() {
     <?php
 }
 add_action( 'login_enqueue_scripts', 'rpc_hide_lost_password_link' );
+
+/**
+ * 6) Force login via JumpCloud SSO (miniOrange) on wp-login.php
+ *
+ * - Redirects normal login attempts straight to the SSO URL.
+ * - Keeps:
+ *      - already logged-in users as-is
+ *      - an emergency backdoor: ?local_login=1
+ *      - WP Engine SSO (adjust the query param checks if needed)
+ */
+function rpc_force_sso_login() {
+
+    // If already logged in, do nothing.
+    if ( is_user_logged_in() ) {
+        return;
+    }
+
+    // Emergency: allow normal login with ?local_login=1
+    if ( isset( $_GET['local_login'] ) && $_GET['local_login'] == '1' ) {
+        return;
+    }
+
+    // (Optional) Allow WP Engine auto-login to work.
+    // Adjust these param names based on the actual WP Engine SSO URL you see.
+    if ( isset( $_GET['wpe-login'] ) || isset( $_GET['wpe_sso'] ) || isset( $_GET['wpe-auth'] ) ) {
+        return;
+    }
+
+    // Avoid redirect loops when miniOrange handles SAML endpoints.
+    if ( isset( $_GET['saml_sso'] ) ) {
+        return;
+    }
+    if ( isset( $_GET['option'] ) && $_GET['option'] === 'saml_acs' ) {
+        return;
+    }
+
+    // Only act on the main login screen.
+    // (login_init runs only on wp-login.php, so no extra path check needed.)
+
+    // Build miniOrange SSO URL:
+    // Common pattern: wp-login.php?saml_sso
+    $sso_url = add_query_arg( 'saml_sso', '1', wp_login_url() );
+
+    wp_redirect( $sso_url );
+    exit;
+}
+add_action( 'login_init', 'rpc_force_sso_login', 20 );
